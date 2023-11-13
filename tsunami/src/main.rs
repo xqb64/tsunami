@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     net::Ipv4Addr,
     sync::{Arc, Mutex},
     time::Duration,
@@ -39,15 +39,25 @@ async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange]) -> Result<()
     let id_table = Arc::new(Mutex::new(HashMap::new()));
     let semaphore = Arc::new(Semaphore::new(512));
 
+    let mut combined = HashSet::new();
+
+    for port in ports {
+        combined.insert(*port);
+    }
+
     for range in ranges {
         for port in range.start..range.end {
-            tasks.push(tokio::spawn(worker(
-                target,
-                port,
-                semaphore.clone(),
-                id_table.clone(),
-            )));
+            combined.insert(port);
         }
+    }
+
+    for port in combined {
+        tasks.push(tokio::spawn(worker(
+            target,
+            port,
+            semaphore.clone(),
+            id_table.clone(),
+        )));
     }
 
     for task in tasks {
@@ -63,7 +73,7 @@ async fn worker(
     dest: Ipv4Addr,
     port: u16,
     semaphore: Arc<Semaphore>,
-    id_table: Arc<Mutex<HashMap<u16, u16>>>,
+    _id_table: Arc<Mutex<HashMap<u16, u16>>>,
 ) -> Result<()> {
     if let Ok(permit) = semaphore.acquire().await {
         let sock = RawSocket::new(
@@ -145,12 +155,12 @@ fn build_tcp_packet(buf: &mut [u8], destination: Ipv4Addr, port: u16) -> Mutable
     use pnet::packet::tcp::ipv4_checksum;
 
     let mut packet = MutableTcpPacket::new(buf).unwrap();
-    packet.set_source(0x1337 as u16);
+    packet.set_source(0x1337_u16);
     packet.set_destination(port);
     packet.set_sequence(rand::random::<u32>());
     packet.set_data_offset(5);
     packet.set_flags(TcpFlags::SYN);
-    packet.set_window(0x7110 as u16);
+    packet.set_window(0x7110_u16);
     packet.set_checksum(ipv4_checksum(
         &packet.to_immutable(),
         &Ipv4Addr::new(192, 168, 1, 64),
@@ -198,7 +208,7 @@ impl std::str::FromStr for PortRange {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let parts: Vec<_> = s.split("-").collect();
+        let parts: Vec<_> = s.split('-').collect();
         if parts.len() != 2 {
             bail!("expected start-end");
         }
