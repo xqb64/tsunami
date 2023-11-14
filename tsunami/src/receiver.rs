@@ -1,8 +1,11 @@
 use crate::net::{create_recv_sock, IP_HDR_LEN};
 use anyhow::{bail, Result};
-use pnet::packet::tcp::TcpPacket;
+use pnet::packet::tcp::{TcpFlags, TcpPacket};
 use std::time::Duration;
 use tokio::time::timeout;
+
+const SYNACK: u8 = TcpFlags::SYN | TcpFlags::ACK;
+const RSTACK: u8 = TcpFlags::RST | TcpFlags::ACK;
 
 pub async fn receive() -> Result<()> {
     let sock = create_recv_sock()?;
@@ -25,8 +28,8 @@ pub async fn receive() -> Result<()> {
         let port = tcp_packet.get_source();
 
         match tcp_packet.get_flags() {
-            18 => println!("{port}: open"),
-            20 => println!("{port}: closed"),
+            SYNACK => println!("{port}: open"),
+            RSTACK => println!("{port}: closed"),
             _ => {}
         }
     }
