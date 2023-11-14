@@ -1,10 +1,9 @@
+use anyhow::Result;
 use std::{
     collections::{HashMap, HashSet},
     net::Ipv4Addr,
     sync::{Arc, Mutex},
 };
-
-use anyhow::Result;
 use structopt::StructOpt;
 use tokio::sync::Semaphore;
 use tsunami::cli::{Opt, PortRange};
