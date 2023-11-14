@@ -30,12 +30,7 @@ async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange]) -> Result<()
     let combined: HashSet<_> = ports
         .iter()
         .copied()
-        .chain(
-            ranges
-                .iter()
-                .flat_map(|r| (r.start..r.end))
-                .collect::<HashSet<_>>(),
-        )
+        .chain(ranges.iter().flat_map(|r| (r.start..r.end)))
         .collect();
 
     for port in combined {
