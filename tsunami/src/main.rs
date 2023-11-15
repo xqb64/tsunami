@@ -1,20 +1,21 @@
 use anyhow::Result;
-use std::{collections::HashSet, net::Ipv4Addr, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 use structopt::StructOpt;
 use tokio::sync::Semaphore;
 use tsunami::cli::{Opt, PortRange};
+use tsunami::net::to_ipaddr;
 use tsunami::receiver::receive;
 use tsunami::worker::inspect;
 
 #[tokio::main]
 async fn main() {
     let opts = Opt::from_args();
-    if let Err(e) = run(opts.target, &opts.ports, &opts.ranges, opts.workers).await {
+    if let Err(e) = run(&opts.target, &opts.ports, &opts.ranges, opts.workers).await {
         eprintln!("tsunami: {:?}", e);
     }
 }
 
-async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange], workers: u16) -> Result<()> {
+async fn run(target: &str, ports: &[u16], ranges: &[PortRange], workers: u16) -> Result<()> {
     let mut tasks = vec![];
 
     let receiver = tokio::spawn(receive());
@@ -28,7 +29,11 @@ async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange], workers: u16
         .collect();
 
     for port in combined {
-        tasks.push(tokio::spawn(inspect(target, port, semaphore.clone())));
+        tasks.push(tokio::spawn(inspect(
+            to_ipaddr(target).await?,
+            port,
+            semaphore.clone(),
+        )));
     }
 
     for task in tasks {
