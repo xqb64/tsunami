@@ -9,17 +9,17 @@ use tsunami::worker::inspect;
 #[tokio::main]
 async fn main() {
     let opts = Opt::from_args();
-    if let Err(e) = run(opts.target, &opts.ports, &opts.ranges).await {
+    if let Err(e) = run(opts.target, &opts.ports, &opts.ranges, opts.workers).await {
         eprintln!("tsunami: {:?}", e);
     }
 }
 
-async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange]) -> Result<()> {
+async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange], workers: u16) -> Result<()> {
     let mut tasks = vec![];
 
     let receiver = tokio::spawn(receive());
 
-    let semaphore = Arc::new(Semaphore::new(512));
+    let semaphore = Arc::new(Semaphore::new(workers as usize));
 
     let combined: HashSet<_> = ports
         .iter()

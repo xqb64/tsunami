@@ -12,6 +12,9 @@ pub struct Opt {
 
     #[structopt(short, long)]
     pub ranges: Vec<PortRange>,
+
+    #[structopt(short, long)]
+    pub workers: u16,
 }
 
 #[derive(Debug, Clone, Copy)]
