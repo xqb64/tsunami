@@ -1,11 +1,10 @@
 use anyhow::{bail, Result};
-use std::net::Ipv4Addr;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
 pub struct Opt {
     #[structopt(short, long)]
-    pub target: Ipv4Addr,
+    pub target: String,
 
     #[structopt(short, long)]
     pub ports: Vec<u16>,
@@ -13,7 +12,7 @@ pub struct Opt {
     #[structopt(short, long)]
     pub ranges: Vec<PortRange>,
 
-    #[structopt(short, long)]
+    #[structopt(short, long, default_value = "1")]
     pub workers: u16,
 }
 
