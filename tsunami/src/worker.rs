@@ -3,24 +3,14 @@ use anyhow::Result;
 use pnet::packet::Packet;
 use raw_socket::tokio::prelude::{Level, Name};
 use std::time::Duration;
-use std::{
-    collections::HashMap,
-    net::Ipv4Addr,
-    sync::{Arc, Mutex},
-};
+use std::{net::Ipv4Addr, sync::Arc};
 use tokio::sync::Semaphore;
 
-pub async fn inspect(
-    dest: Ipv4Addr,
-    port: u16,
-    semaphore: Arc<Semaphore>,
-    _id_table: Arc<Mutex<HashMap<u16, u16>>>,
-) -> Result<()> {
+pub async fn inspect(dest: Ipv4Addr, port: u16, semaphore: Arc<Semaphore>) -> Result<()> {
     if let Ok(permit) = semaphore.acquire().await {
         let sock = create_send_sock()?;
-        let id = rand::random::<u16>();
         let mut ipv4_buf = vec![0u8; (IP_HDR_LEN + TCP_HDR_LEN) as usize];
-        let mut ipv4_packet = build_ipv4_packet(&mut ipv4_buf, dest, id);
+        let mut ipv4_packet = build_ipv4_packet(&mut ipv4_buf, dest);
         let mut tcp_buf = vec![0u8; TCP_HDR_LEN as usize];
         let tcp_packet = build_tcp_packet(&mut tcp_buf, dest, port);
 

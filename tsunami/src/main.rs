@@ -1,9 +1,5 @@
 use anyhow::Result;
-use std::{
-    collections::{HashMap, HashSet},
-    net::Ipv4Addr,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashSet, net::Ipv4Addr, sync::Arc};
 use structopt::StructOpt;
 use tokio::sync::Semaphore;
 use tsunami::cli::{Opt, PortRange};
@@ -23,7 +19,6 @@ async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange]) -> Result<()
 
     let receiver = tokio::spawn(receive());
 
-    let id_table = Arc::new(Mutex::new(HashMap::new()));
     let semaphore = Arc::new(Semaphore::new(512));
 
     let combined: HashSet<_> = ports
@@ -33,12 +28,7 @@ async fn run(target: Ipv4Addr, ports: &[u16], ranges: &[PortRange]) -> Result<()
         .collect();
 
     for port in combined {
-        tasks.push(tokio::spawn(inspect(
-            target,
-            port,
-            semaphore.clone(),
-            id_table.clone(),
-        )));
+        tasks.push(tokio::spawn(inspect(target, port, semaphore.clone())));
     }
 
     for task in tasks {
