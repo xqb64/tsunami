@@ -11,7 +11,7 @@ pub const IP_HDR_LEN: u16 = 20;
 pub const TCP_HDR_LEN: u16 = 20;
 pub const IPPROTO_RAW: i32 = 255;
 
-pub fn build_ipv4_packet(buf: &mut [u8], dest: Ipv4Addr, id: u16) -> MutableIpv4Packet {
+pub fn build_ipv4_packet(buf: &mut [u8], dest: Ipv4Addr) -> MutableIpv4Packet {
     use pnet::packet::ipv4::checksum;
 
     let mut packet = MutableIpv4Packet::new(buf).unwrap();
@@ -22,7 +22,7 @@ pub fn build_ipv4_packet(buf: &mut [u8], dest: Ipv4Addr, id: u16) -> MutableIpv4
 
     /* We are setting the identification field to the TTL
      * that we later use to map responses back to correct hops. */
-    packet.set_identification(id);
+    packet.set_identification(rand::random::<u16>());
     packet.set_next_level_protocol(IpNextHeaderProtocols::Tcp);
     packet.set_destination(dest);
     packet.set_flags(Ipv4Flags::DontFragment);
