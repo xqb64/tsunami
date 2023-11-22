@@ -20,7 +20,7 @@ async fn run(target: &str, ports: &[u16], ranges: &[PortRange], workers: u16) ->
     let combined: HashSet<_> = ports
         .iter()
         .copied()
-        .chain(ranges.iter().flat_map(|r| (r.start..r.end)))
+        .chain(ranges.iter().flat_map(|r| (r.start..=r.end)))
         .collect();
 
     let (tx, mut rx) = mpsc::channel(8);
