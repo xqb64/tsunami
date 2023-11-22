@@ -11,12 +11,26 @@ use tsunami::Message;
 #[tokio::main]
 async fn main() {
     let opts = Opt::from_args();
-    if let Err(e) = run(&opts.target, &opts.ports, &opts.ranges, opts.workers).await {
+    if let Err(e) = run(
+        &opts.target,
+        &opts.ports,
+        &opts.ranges,
+        opts.workers,
+        opts.max_retries,
+    )
+    .await
+    {
         eprintln!("tsunami: {:?}", e);
     }
 }
 
-async fn run(target: &str, ports: &[u16], ranges: &[PortRange], workers: u16) -> Result<()> {
+async fn run(
+    target: &str,
+    ports: &[u16],
+    ranges: &[PortRange],
+    workers: u16,
+    max_retries: usize,
+) -> Result<()> {
     let combined: HashSet<_> = ports
         .iter()
         .copied()
@@ -25,7 +39,7 @@ async fn run(target: &str, ports: &[u16], ranges: &[PortRange], workers: u16) ->
 
     let (tx, mut rx) = mpsc::channel(8);
 
-    let receiver = tokio::spawn(receive(combined, tx));
+    let receiver = tokio::spawn(receive(combined, tx, max_retries));
 
     let semaphore = Arc::new(Semaphore::new(workers as usize));
 
@@ -35,7 +49,7 @@ async fn run(target: &str, ports: &[u16], ranges: &[PortRange], workers: u16) ->
                 Message::Payload(payload) => {
                     let mut tasks = vec![];
 
-                    for port in payload {
+                    for (port, _) in payload {
                         tasks.push(tokio::spawn(inspect(
                             to_ipaddr(target).await?,
                             port,

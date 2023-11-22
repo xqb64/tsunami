@@ -14,6 +14,9 @@ pub struct Opt {
 
     #[structopt(short, long, default_value = "1")]
     pub workers: u16,
+
+    #[structopt(short, long, default_value = "3")]
+    pub max_retries: usize,
 }
 
 #[derive(Debug, Clone, Copy)]

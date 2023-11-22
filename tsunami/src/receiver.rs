@@ -1,22 +1,42 @@
 use crate::{
     net::{create_recv_sock, IP_HDR_LEN},
-    Message,
+    Message, PortInfo, PortStatus,
 };
 use anyhow::{bail, Result};
 use pnet::packet::tcp::{TcpFlags, TcpPacket};
-use std::{collections::HashSet, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 use tokio::{sync::mpsc::Sender, time::timeout};
 
 const SYNACK: u8 = TcpFlags::SYN | TcpFlags::ACK;
 const RSTACK: u8 = TcpFlags::RST | TcpFlags::ACK;
 
-pub async fn receive(combined: HashSet<u16>, tx: Sender<Message>) -> Result<()> {
+pub async fn receive(
+    combined: HashSet<u16>,
+    tx: Sender<Message>,
+    max_retries: usize,
+) -> Result<()> {
     let sock = create_recv_sock()?;
     let mut buf = [0u8; 576];
 
-    tx.send(Message::Payload(combined.clone())).await?;
+    let mut status = combined
+        .iter()
+        .map(|port| {
+            (
+                *port,
+                PortInfo {
+                    status: PortStatus::NotInspected,
+                    retried: 0,
+                },
+            )
+        })
+        .collect::<HashMap<u16, PortInfo>>();
 
-    let mut recvd = HashSet::new();
+    tx.send(Message::Payload(status.clone())).await?;
+
+    status.iter_mut().for_each(|(_, info)| info.retried += 1);
 
     loop {
         let (_bytes_recvd, _ip_addr) =
@@ -27,15 +47,27 @@ pub async fn receive(combined: HashSet<u16>, tx: Sender<Message>) -> Result<()> 
                     (Some(bytes), Some(ip))
                 }
                 Err(_) => {
-                    let diff = combined.difference(&recvd);
-                    if diff.clone().next().is_none() {
+                    let not_inspected = status
+                        .iter()
+                        .filter(|(_, info)| {
+                            info.status == PortStatus::NotInspected && info.retried < max_retries
+                        })
+                        .map(|(port, info)| (port.to_owned(), info.to_owned()))
+                        .collect::<HashMap<u16, PortInfo>>();
+
+                    if not_inspected.is_empty() {
                         tx.send(Message::Break).await?;
                         break;
                     } else {
-                        tx.send(Message::Payload(
-                            diff.clone().map(|x| x.to_owned()).collect(),
-                        ))
-                        .await?;
+                        status
+                            .iter_mut()
+                            .filter(|(port, _)| not_inspected.contains_key(port))
+                            .for_each(|(_, info)| {
+                                if info.retried < max_retries {
+                                    info.retried += 1
+                                }
+                            });
+                        tx.send(Message::Payload(not_inspected)).await?;
                     }
 
                     (None, None)
@@ -49,14 +81,44 @@ pub async fn receive(combined: HashSet<u16>, tx: Sender<Message>) -> Result<()> 
 
         let port = tcp_packet.get_source();
 
-        recvd.insert(port);
-
         match tcp_packet.get_flags() {
-            SYNACK => println!("{port}: open"),
-            RSTACK => println!("{port}: closed"),
+            SYNACK => {
+                if let Some(info) = status.get_mut(&port) {
+                    info.status = PortStatus::Open;
+                    println!("{port}: open");
+                }
+            }
+            RSTACK => {
+                if let Some(info) = status.get_mut(&port) {
+                    info.status = PortStatus::Closed;
+                }
+            }
             _ => {}
         }
     }
+
+    let closed_count = status
+        .iter()
+        .filter(|(_, info)| info.status == PortStatus::Closed)
+        .count();
+
+    println!("ports closed: {closed_count}");
+
+    status
+        .iter_mut()
+        .filter(|(_, info)| info.retried >= max_retries)
+        .for_each(|(_, info)| info.status = PortStatus::Filtered);
+
+    let filtered_count = status
+        .iter()
+        .filter(|(_, info)| info.status == PortStatus::Filtered)
+        .count();
+
+    println!("ports filtered: {filtered_count}");
+
+    let retried_more_than_once_count = status.iter().filter(|(_, info)| info.retried > 1).count();
+
+    println!("ports retried more than once: {retried_more_than_once_count}");
 
     Ok(())
 }
