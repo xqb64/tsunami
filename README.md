@@ -10,4 +10,4 @@ The technique used, known as "stealth" (or "half-open") scanning, involves sendi
 
 ## Performance
 
-In a lab environment on a machine with four cores and a direct 15m Category 6e link to the target router, tsunami managed to inspect ~64K ports in under 3 seconds.
+In a lab environment on a machine with four cores and a direct 15m Category 6e link to the target router, tsunami managed to inspect 64K ports in under 3 seconds.
