@@ -17,6 +17,7 @@ async fn main() {
         &opts.ranges,
         opts.workers,
         opts.max_retries,
+        opts.nap_duration,
     )
     .await
     {
@@ -30,6 +31,7 @@ async fn run(
     ranges: &[PortRange],
     workers: u16,
     max_retries: usize,
+    nap_duration: u64,
 ) -> Result<()> {
     let combined: HashSet<_> = ports
         .iter()
@@ -54,6 +56,7 @@ async fn run(
                             to_ipaddr(target).await?,
                             port,
                             semaphore.clone(),
+                            nap_duration,
                         )));
                     }
 

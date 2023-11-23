@@ -17,6 +17,9 @@ pub struct Opt {
 
     #[structopt(short, long, default_value = "3")]
     pub max_retries: usize,
+
+    #[structopt(short, long, default_value = "20")]
+    pub nap_duration: u64,
 }
 
 #[derive(Debug, Clone, Copy)]

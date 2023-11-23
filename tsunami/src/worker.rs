@@ -6,7 +6,12 @@ use std::time::Duration;
 use std::{net::Ipv4Addr, sync::Arc};
 use tokio::sync::Semaphore;
 
-pub async fn inspect(dest: Ipv4Addr, port: u16, semaphore: Arc<Semaphore>) -> Result<()> {
+pub async fn inspect(
+    dest: Ipv4Addr,
+    port: u16,
+    semaphore: Arc<Semaphore>,
+    nap_duration: u64,
+) -> Result<()> {
     if let Ok(_permit) = semaphore.acquire().await {
         let sock = create_send_sock()?;
         let mut ipv4_buf = vec![0u8; (IP_HDR_LEN + TCP_HDR_LEN) as usize];
@@ -19,7 +24,7 @@ pub async fn inspect(dest: Ipv4Addr, port: u16, semaphore: Arc<Semaphore>) -> Re
         sock.set_sockopt(Level::IPV4, Name::IPV4_HDRINCL, &1i32)?;
         sock.send_to(ipv4_packet.packet(), (dest, port)).await?;
 
-        tokio::time::sleep(Duration::from_millis(20)).await;
+        tokio::time::sleep(Duration::from_millis(nap_duration)).await;
     }
 
     Ok(())
