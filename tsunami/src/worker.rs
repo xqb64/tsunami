@@ -11,13 +11,14 @@ pub async fn inspect(
     port: u16,
     semaphore: Arc<Semaphore>,
     nap_duration: u64,
+    src_ip_addr: Ipv4Addr,
 ) -> Result<()> {
     if let Ok(_permit) = semaphore.acquire().await {
         let sock = create_send_sock()?;
         let mut ipv4_buf = vec![0u8; (IP_HDR_LEN + TCP_HDR_LEN) as usize];
         let mut ipv4_packet = build_ipv4_packet(&mut ipv4_buf, dest);
         let mut tcp_buf = vec![0u8; TCP_HDR_LEN as usize];
-        let tcp_packet = build_tcp_packet(&mut tcp_buf, dest, port);
+        let tcp_packet = build_tcp_packet(&mut tcp_buf, dest, port, src_ip_addr)?;
 
         ipv4_packet.set_payload(tcp_packet.packet());
 

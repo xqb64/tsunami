@@ -96,7 +96,12 @@ pub fn build_ipv4_packet(buf: &mut [u8], dest: Ipv4Addr) -> MutableIpv4Packet {
     packet
 }
 
-pub fn build_tcp_packet(buf: &mut [u8], destination: Ipv4Addr, port: u16) -> MutableTcpPacket {
+pub fn build_tcp_packet(
+    buf: &mut [u8],
+    destination: Ipv4Addr,
+    port: u16,
+    src_ip_addr: Ipv4Addr,
+) -> Result<MutableTcpPacket> {
     use pnet::packet::tcp::ipv4_checksum;
 
     let mut packet = MutableTcpPacket::new(buf).unwrap();
@@ -108,11 +113,11 @@ pub fn build_tcp_packet(buf: &mut [u8], destination: Ipv4Addr, port: u16) -> Mut
     packet.set_window(0x7110_u16);
     packet.set_checksum(ipv4_checksum(
         &packet.to_immutable(),
-        &Ipv4Addr::new(192, 168, 1, 64),
+        &src_ip_addr,
         &destination,
     ));
 
-    packet
+    Ok(packet)
 }
 
 pub fn create_recv_sock() -> Result<RawSocket> {
@@ -144,4 +149,33 @@ pub async fn to_ipaddr(target: &str) -> Result<Ipv4Addr> {
             Err(_) => bail!("couldn't resolve the hostname {target}"),
         },
     }
+}
+
+pub fn get_default_gateway_interface() -> Result<IpAddr> {
+    use pnet::datalink;
+    use std::process::Command;
+
+    let output = String::from_utf8(
+        Command::new("ip")
+            .args(["route", "show", "default"])
+            .output()?
+            .stdout,
+    )?;
+
+    let default_gateway = output
+        .split_whitespace()
+        .nth(2)
+        .unwrap()
+        .parse::<IpAddr>()?;
+
+    let mut interface_ip_addr = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
+    for interface in datalink::interfaces() {
+        for ip_net in interface.ips {
+            if ip_net.contains(default_gateway) {
+                interface_ip_addr = ip_net.ip();
+            }
+        }
+    }
+
+    Ok(interface_ip_addr)
 }

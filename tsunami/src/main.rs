@@ -1,9 +1,10 @@
 use anyhow::Result;
+use std::net::IpAddr;
 use std::{collections::HashSet, sync::Arc};
 use structopt::StructOpt;
 use tokio::sync::{mpsc, Semaphore};
 use tsunami::cli::{Opt, PortRange};
-use tsunami::net::to_ipaddr;
+use tsunami::net::{get_default_gateway_interface, to_ipaddr};
 use tsunami::receiver::receive;
 use tsunami::worker::inspect;
 use tsunami::Message;
@@ -33,6 +34,11 @@ async fn run(
     max_retries: usize,
     nap_duration: u64,
 ) -> Result<()> {
+    let ip_addr = match get_default_gateway_interface()? {
+        IpAddr::V4(ipv4) => ipv4,
+        _ => unimplemented!(),
+    };
+
     let combined: HashSet<_> = ports
         .iter()
         .copied()
@@ -57,6 +63,7 @@ async fn run(
                             port,
                             semaphore.clone(),
                             nap_duration,
+                            ip_addr,
                         )));
                     }
 
