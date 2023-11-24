@@ -5,7 +5,7 @@ description = "A screaming-fast TCP SYN reconnaissance tool"
 readme = "README.md"
 repository = "https://github.com/xqb64/tsunami"
 license = "MIT"
-keywords = ["port scanner"]
+keywords = ["port scanner", "networking"]
 version = "0.1.0"
 edition = "2021"
 
