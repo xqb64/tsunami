@@ -3,11 +3,13 @@ use std::net::IpAddr;
 use std::{collections::HashSet, sync::Arc};
 use structopt::StructOpt;
 use tokio::sync::{mpsc, Semaphore};
-use tsunami::cli::{Opt, PortRange};
-use tsunami::net::{get_default_gateway_interface, to_ipaddr};
-use tsunami::receiver::receive;
-use tsunami::worker::inspect;
-use tsunami::Message;
+use tsunami::{
+    cli::{Opt, PortRange},
+    net::{get_default_gateway_interface, to_ipaddr},
+    receiver::receive,
+    worker::inspect,
+    {Message, Port},
+};
 
 #[tokio::main]
 async fn main() {
@@ -28,7 +30,7 @@ async fn main() {
 
 async fn run(
     target: &str,
-    ports: &[u16],
+    ports: &[Port],
     ranges: &[PortRange],
     workers: u16,
     max_retries: usize,

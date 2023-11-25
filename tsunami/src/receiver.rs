@@ -1,6 +1,6 @@
 use crate::{
     net::{create_recv_sock, IP_HDR_LEN},
-    Message, PortInfo, PortStatus,
+    Message, Port, PortInfo, PortStatus,
 };
 use anyhow::{bail, Result};
 use pnet::packet::tcp::{TcpFlags, TcpPacket};
@@ -14,7 +14,7 @@ const SYNACK: u8 = TcpFlags::SYN | TcpFlags::ACK;
 const RSTACK: u8 = TcpFlags::RST | TcpFlags::ACK;
 
 pub async fn receive(
-    combined: HashSet<u16>,
+    combined: HashSet<Port>,
     tx: Sender<Message>,
     max_retries: usize,
 ) -> Result<()> {

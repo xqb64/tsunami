@@ -1,3 +1,4 @@
+use crate::Port;
 use anyhow::{bail, Result};
 use libc::{
     addrinfo, freeaddrinfo, gai_strerror, getaddrinfo, getnameinfo, sockaddr, socklen_t, AF_INET,
@@ -99,7 +100,7 @@ pub fn build_ipv4_packet(buf: &mut [u8], dest: Ipv4Addr) -> MutableIpv4Packet {
 pub fn build_tcp_packet(
     buf: &mut [u8],
     destination: Ipv4Addr,
-    port: u16,
+    port: Port,
     src_ip_addr: Ipv4Addr,
 ) -> Result<MutableTcpPacket> {
     use pnet::packet::tcp::ipv4_checksum;

@@ -23,3 +23,5 @@ pub enum PortStatus {
     Filtered,
     NotInspected,
 }
+
+pub type Port = u16;

@@ -1,3 +1,4 @@
+use crate::Port;
 use anyhow::{bail, Result};
 use structopt::StructOpt;
 
@@ -7,7 +8,7 @@ pub struct Opt {
     pub target: String,
 
     #[structopt(short, long)]
-    pub ports: Vec<u16>,
+    pub ports: Vec<Port>,
 
     #[structopt(short, long)]
     pub ranges: Vec<PortRange>,
@@ -24,12 +25,12 @@ pub struct Opt {
 
 #[derive(Debug, Clone, Copy)]
 pub struct PortRange {
-    pub start: u16,
-    pub end: u16,
+    pub start: Port,
+    pub end: Port,
 }
 
-impl From<Vec<u16>> for PortRange {
-    fn from(value: Vec<u16>) -> Self {
+impl From<Vec<Port>> for PortRange {
+    fn from(value: Vec<Port>) -> Self {
         Self {
             start: value[0],
             end: value[1],
@@ -46,9 +47,9 @@ impl std::str::FromStr for PortRange {
             bail!("expected start-end");
         }
 
-        let parsed: Vec<u16> = parts
+        let parsed: Vec<Port> = parts
             .iter()
-            .map(|p| p.parse::<u16>().expect("can't parse u16"))
+            .map(|p| p.parse::<Port>().expect("can't parse port as u16"))
             .collect();
 
         Ok(parsed.into())
