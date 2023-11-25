@@ -1,4 +1,5 @@
 use crate::net::{build_ipv4_packet, build_tcp_packet, create_send_sock, IP_HDR_LEN, TCP_HDR_LEN};
+use crate::Port;
 use anyhow::Result;
 use pnet::packet::Packet;
 use raw_socket::tokio::prelude::{Level, Name};
@@ -8,7 +9,7 @@ use tokio::sync::Semaphore;
 
 pub async fn inspect(
     dest: Ipv4Addr,
-    port: u16,
+    port: Port,
     semaphore: Arc<Semaphore>,
     nap_duration: u64,
     src_ip_addr: Ipv4Addr,
