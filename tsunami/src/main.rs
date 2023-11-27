@@ -53,28 +53,26 @@ async fn run(
 
     let semaphore = Arc::new(Semaphore::new(workers as usize));
 
-    loop {
-        if let Some(msg) = rx.recv().await {
-            match msg {
-                Message::Payload(payload) => {
-                    let mut tasks = vec![];
+    while let Some(msg) = rx.recv().await {
+        match msg {
+            Message::Payload(payload) => {
+                let mut tasks = vec![];
 
-                    for (port, _) in payload {
-                        tasks.push(tokio::spawn(inspect(
-                            to_ipaddr(target).await?,
-                            port,
-                            semaphore.clone(),
-                            nap_duration,
-                            ip_addr,
-                        )));
-                    }
-
-                    for task in tasks {
-                        task.await??;
-                    }
+                for (port, _) in payload {
+                    tasks.push(tokio::spawn(inspect(
+                        to_ipaddr(target).await?,
+                        port,
+                        semaphore.clone(),
+                        nap_duration,
+                        ip_addr,
+                    )));
                 }
-                Message::Break => break,
+
+                for task in tasks {
+                    task.await??;
+                }
             }
+            Message::Break => break,
         }
     }
 
