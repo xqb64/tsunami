@@ -3,16 +3,18 @@ use crate::Port;
 use anyhow::Result;
 use pnet::packet::Packet;
 use raw_socket::tokio::prelude::{Level, Name};
-use std::time::Duration;
 use std::{net::Ipv4Addr, sync::Arc};
-use tokio::sync::Semaphore;
+use tokio::{
+    sync::Semaphore,
+    time::{sleep, Duration},
+};
 
 pub async fn inspect(
     dest: Ipv4Addr,
     port: Port,
     semaphore: Arc<Semaphore>,
-    nap_duration: u64,
     src_ip_addr: Ipv4Addr,
+    nap_after_spawn: f64,
 ) -> Result<()> {
     if let Ok(_permit) = semaphore.acquire().await {
         let sock = create_send_sock()?;
@@ -26,7 +28,7 @@ pub async fn inspect(
         sock.set_sockopt(Level::IPV4, Name::IPV4_HDRINCL, &1i32)?;
         sock.send_to(ipv4_packet.packet(), (dest, port)).await?;
 
-        tokio::time::sleep(Duration::from_millis(nap_duration)).await;
+        sleep(Duration::from_secs_f64(nap_after_spawn / 1000.0)).await;
     }
 
     Ok(())

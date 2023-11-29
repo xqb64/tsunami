@@ -34,7 +34,8 @@ pub async fn receive(
         })
         .collect::<HashMap<u16, PortInfo>>();
 
-    tx.send(Message::Payload(status.clone())).await?;
+    tx.send(Message::Payload(status.keys().copied().collect()))
+        .await?;
 
     status.iter_mut().for_each(|(_, info)| info.retried += 1);
 
@@ -52,8 +53,8 @@ pub async fn receive(
                         .filter(|(_, info)| {
                             info.status == PortStatus::NotInspected && info.retried < max_retries
                         })
-                        .map(|(port, info)| (port.to_owned(), info.to_owned()))
-                        .collect::<HashMap<u16, PortInfo>>();
+                        .map(|(port, _)| port.to_owned())
+                        .collect::<Vec<u16>>();
 
                     if not_inspected.is_empty() {
                         tx.send(Message::Break).await?;
@@ -61,7 +62,7 @@ pub async fn receive(
                     } else {
                         status
                             .iter_mut()
-                            .filter(|(port, _)| not_inspected.contains_key(port))
+                            .filter(|(port, _)| not_inspected.contains(port))
                             .for_each(|(_, info)| {
                                 if info.retried < max_retries {
                                     info.retried += 1

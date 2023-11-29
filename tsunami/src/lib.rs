@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 pub mod cli;
 pub mod net;
 pub mod receiver;
 pub mod worker;
 
 pub enum Message {
-    Payload(HashMap<u16, PortInfo>),
+    Payload(Vec<u16>),
     Break,
 }
 

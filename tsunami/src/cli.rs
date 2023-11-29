@@ -13,14 +13,20 @@ pub struct Opt {
     #[structopt(short, long)]
     pub ranges: Vec<PortRange>,
 
-    #[structopt(short, long, default_value = "1")]
-    pub workers: u16,
+    #[structopt(short, long, default_value = "512")]
+    pub flying_tasks: u16,
 
     #[structopt(short, long, default_value = "3")]
     pub max_retries: usize,
 
-    #[structopt(short, long, default_value = "20")]
-    pub nap_duration: u64,
+    #[structopt(short, long, default_value = "512")]
+    pub batch_size: usize,
+
+    #[structopt(short = "n", long, default_value = "10")]
+    pub nap_after_spawn: f64,
+
+    #[structopt(short = "N", long, default_value = "10")]
+    pub nap_after_batch: f64,
 }
 
 #[derive(Debug, Clone, Copy)]

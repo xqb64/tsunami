@@ -2,7 +2,10 @@ use anyhow::Result;
 use std::net::IpAddr;
 use std::{collections::HashSet, sync::Arc};
 use structopt::StructOpt;
-use tokio::sync::{mpsc, Semaphore};
+use tokio::{
+    sync::{mpsc, Semaphore},
+    time::{sleep, Duration},
+};
 use tsunami::{
     cli::{Opt, PortRange},
     net::{get_default_gateway_interface, to_ipaddr},
@@ -18,9 +21,11 @@ async fn main() {
         &opts.target,
         &opts.ports,
         &opts.ranges,
-        opts.workers,
+        opts.flying_tasks,
         opts.max_retries,
-        opts.nap_duration,
+        opts.batch_size,
+        opts.nap_after_spawn,
+        opts.nap_after_batch,
     )
     .await
     {
@@ -28,13 +33,16 @@ async fn main() {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run(
     target: &str,
     ports: &[Port],
     ranges: &[PortRange],
-    workers: u16,
+    flying_tasks: u16,
     max_retries: usize,
-    nap_duration: u64,
+    batch_size: usize,
+    nap_after_spawn: f64,
+    nap_after_batch: f64,
 ) -> Result<()> {
     let ip_addr = match get_default_gateway_interface()? {
         IpAddr::V4(ipv4) => ipv4,
@@ -51,25 +59,29 @@ async fn run(
 
     let receiver = tokio::spawn(receive(combined, tx, max_retries));
 
-    let semaphore = Arc::new(Semaphore::new(workers as usize));
+    let semaphore = Arc::new(Semaphore::new(flying_tasks as usize));
 
     while let Some(msg) = rx.recv().await {
         match msg {
             Message::Payload(payload) => {
-                let mut tasks = vec![];
+                for chunk in payload.chunks(batch_size) {
+                    let mut tasks = vec![];
 
-                for (port, _) in payload {
-                    tasks.push(tokio::spawn(inspect(
-                        to_ipaddr(target).await?,
-                        port,
-                        semaphore.clone(),
-                        nap_duration,
-                        ip_addr,
-                    )));
-                }
+                    for port in chunk {
+                        tasks.push(tokio::spawn(inspect(
+                            to_ipaddr(target).await?,
+                            *port,
+                            semaphore.clone(),
+                            ip_addr,
+                            nap_after_spawn,
+                        )));
+                    }
 
-                for task in tasks {
-                    task.await??;
+                    for task in tasks {
+                        task.await??;
+                    }
+
+                    sleep(Duration::from_secs_f64(nap_after_batch / 1000.0)).await;
                 }
             }
             Message::Break => break,
