@@ -1,4 +1,6 @@
-![tsunami](tsunami.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/xqb64/tsunami/master/tsunami.png" alt="tsunami"/>
+</p>
 
 <h1 align="center">tsunami</h1>
 
