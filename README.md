@@ -4,20 +4,21 @@
 
 <h1 align="center">tsunami</h1>
 
-A highly performant reconnaissance tool built for inspecting sizable port ranges quickly while minimizing the detection risk at the same time.
+This project represents my second attempt at writing a highly-performant TCP SYN reconnaissance tool. The objective was not to create the next `nmap`, but rather to explore the performance gains achieavable by using Rust over Python. The process of putting it together was real treat, and at this point I'm quite amazed by what Rust can do.
 
 ## How it works
 
 The technique used, known as "stealth" (or "half-open") scanning, involves sending TCP packets with the `SYN` bit set. There are three pathways from here:
+
 - If the target responds with `SYNACK`, it means that the port is open.
 - If the target responds with `RSTACK`, the port is considered closed.
-- If the target machine does not respond at all, **tsunami** will retry at most `--max-retries` times before reporting the port as filtered
+- If the target machine does not respond at all, `tsunami` will retry at most `--max-retries` times before reporting the port as filtered.
 
 Upon receiving the response (in the first two cases), the kernel sends back another TCP packet with the RST bit set, effectively closing the connection in the middle of the handshake (hence "half-open").
 
 ## Let's talk numbers
 
-In a lab environment on a machine with four cores and a direct 15m Category 6e link to the target router, tsunami managed to inspect 64K ports in under 3 seconds.
+In a lab environment on a machine with four cores and a direct 15m Category 6e link to the target router (`Asus RT-AC58U`, firmware `3.0.0.4.382_52134`), tsunami managed to inspect 64K ports in under 3 seconds.
 
 ```
 $ time target/release/tsunami --target 192.168.1.1 --batch-size 32768 -n 10 -N 10 --flying-tasks 512 -r 0-65535
@@ -79,3 +80,11 @@ OPTIONS:
 ## Contributing
 
 Contributions are very welcome, in particular, suggestions (and patches) as for how to make the whole system faster. Make sure you copy/paste the pre-commit hook into `.git/hooks`.
+
+## See also
+
+[wrath](https://github.com/xqb64/wrath) - My initial attempt, written in Python
+
+## Licensing
+
+Licensed under the [MIT License](https://opensource.org/licenses/MIT). For details, see [LICENSE](https://github.com/xqb64/tsunami/blob/master/LICENSE).
