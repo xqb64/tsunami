@@ -17,10 +17,15 @@ use tsunami::{
 #[tokio::main]
 async fn main() {
     let opts = Opt::from_args();
+
+    if opts.ports.is_none() && opts.ranges.is_none() {
+        eprintln!("either port(s) or range(s) required");
+    }
+
     if let Err(e) = run(
         &opts.target,
-        &opts.ports,
-        &opts.ranges,
+        &opts.ports.unwrap_or_default(),
+        &opts.ranges.unwrap_or_default(),
         opts.flying_tasks,
         opts.max_retries,
         opts.batch_size,

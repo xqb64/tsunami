@@ -4,14 +4,13 @@ use structopt::StructOpt;
 
 #[derive(StructOpt)]
 pub struct Opt {
-    #[structopt(short, long)]
     pub target: String,
 
     #[structopt(short, long)]
-    pub ports: Vec<Port>,
+    pub ports: Option<Vec<Port>>,
 
     #[structopt(short, long)]
-    pub ranges: Vec<PortRange>,
+    pub ranges: Option<Vec<PortRange>>,
 
     #[structopt(short, long, default_value = "512")]
     pub flying_tasks: u16,
