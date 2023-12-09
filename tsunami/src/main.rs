@@ -60,12 +60,18 @@ async fn run(
         .chain(ranges.iter().flat_map(|r| (r.start..=r.end)))
         .collect();
 
+    /* receiver2mainthread */
     let (tx, mut rx) = mpsc::channel(8);
 
     let receiver = tokio::spawn(receive(combined, tx, max_retries));
 
+    /* This semaphore controls the maximum number of tasks in flight. */
     let semaphore = Arc::new(Semaphore::new(flying_tasks as usize));
 
+    /* The main thread awaits messages from the receiver.
+     * A message contains a Vec<Port> payload that tells the main thread
+     * which ports to inspect. The ports are not dispatched immediately,
+     * but are first sliced into 'batch_size' sized chunks (for rate limiting). */
     while let Some(msg) = rx.recv().await {
         match msg {
             Message::Payload(payload) => {
@@ -86,6 +92,7 @@ async fn run(
                         task.await??;
                     }
 
+                    /* Sleep a little for good measure. */
                     sleep(Duration::from_secs_f64(nap_after_batch / 1000.0)).await;
                 }
             }

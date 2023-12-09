@@ -3,8 +3,10 @@ pub mod net;
 pub mod receiver;
 pub mod worker;
 
+pub type Port = u16;
+
 pub enum Message {
-    Payload(Vec<u16>),
+    Payload(Vec<Port>),
     Break,
 }
 
@@ -21,5 +23,3 @@ pub enum PortStatus {
     Filtered,
     NotInspected,
 }
-
-pub type Port = u16;

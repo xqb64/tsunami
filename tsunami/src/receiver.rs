@@ -21,6 +21,7 @@ pub async fn receive(
     let sock = create_recv_sock()?;
     let mut buf = [0u8; 576];
 
+    /* the main HashMap to keep track of the probes */
     let mut status = combined
         .iter()
         .map(|port| {
@@ -34,9 +35,11 @@ pub async fn receive(
         })
         .collect::<HashMap<u16, PortInfo>>();
 
+    /* trigger the machinery */
     tx.send(Message::Payload(status.keys().copied().collect()))
         .await?;
 
+    /* increase the 'retried' field of all ports we just dispatched */
     status.iter_mut().for_each(|(_, info)| info.retried += 1);
 
     loop {
@@ -48,6 +51,8 @@ pub async fn receive(
                     (Some(bytes), Some(ip))
                 }
                 Err(_) => {
+                    /* we haven't received anything for 300ms and it's a good
+                     * opportunity to check which ports have remained uninspected. */
                     let not_inspected = status
                         .iter()
                         .filter(|(_, info)| {
@@ -56,10 +61,14 @@ pub async fn receive(
                         .map(|(port, _)| port.to_owned())
                         .collect::<Vec<u16>>();
 
+                    /* if we inspected everything, break the main thread */
                     if not_inspected.is_empty() {
                         tx.send(Message::Break).await?;
                         break;
                     } else {
+                        /* otherwise, dispatch the ones that have remained uninspected,
+                         * but if and only if they haven't been retried past the 'max_retries'
+                         * upper bound. */
                         status
                             .iter_mut()
                             .filter(|(port, _)| not_inspected.contains(port))
@@ -75,11 +84,15 @@ pub async fn receive(
                 }
             };
 
+        /* The buffer contains the IP header + the TCP segment
+         * which starts immediately after the IP header */
         let tcp_packet = match TcpPacket::new(&buf[IP_HDR_LEN as usize..]) {
             Some(packet) => packet,
             None => bail!("couldn't make tcp packet"),
         };
 
+        /* The 'source' field in the TCP packet is now what used to be
+         * the 'destination' field when we were sending out the probe. */
         let port = tcp_packet.get_source();
 
         match tcp_packet.get_flags() {
