@@ -84,9 +84,6 @@ pub fn build_ipv4_packet(buf: &mut [u8], dest: Ipv4Addr) -> MutableIpv4Packet {
     packet.set_version(4);
     packet.set_ttl(u8::MAX);
     packet.set_header_length(5); /* n * 32 bits. */
-
-    /* We are setting the identification field to the TTL
-     * that we later use to map responses back to correct hops. */
     packet.set_identification(rand::random::<u16>());
     packet.set_next_level_protocol(IpNextHeaderProtocols::Tcp);
     packet.set_destination(dest);
