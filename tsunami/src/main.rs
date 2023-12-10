@@ -6,6 +6,7 @@ use tokio::{
     sync::{mpsc, Semaphore},
     time::{sleep, Duration},
 };
+use tracing::{debug, info, instrument};
 use tsunami::{
     cli::{Opt, PortRange},
     net::{get_default_gateway_interface, to_ipaddr},
@@ -16,10 +17,13 @@ use tsunami::{
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
+
     let opts = Opt::from_args();
 
     if opts.ports.is_none() && opts.ranges.is_none() {
         eprintln!("either port(s) or range(s) required");
+        return;
     }
 
     if let Err(e) = run(
@@ -38,6 +42,7 @@ async fn main() {
     }
 }
 
+#[instrument(skip_all, name = "main thread")]
 #[allow(clippy::too_many_arguments)]
 async fn run(
     target: &str,
@@ -54,15 +59,28 @@ async fn run(
         _ => unimplemented!(),
     };
 
+    debug!("obtained default gateway interface ip: {:?}", ip_addr);
+
     let combined: HashSet<_> = ports
         .iter()
         .copied()
         .chain(ranges.iter().flat_map(|r| (r.start..=r.end)))
         .collect();
 
+    info!(
+        "initiating inspection for {} ({} ports) - mr: {} - bs: {} - nas: {} - nab: {}",
+        target,
+        combined.len(),
+        max_retries,
+        batch_size,
+        nap_after_spawn,
+        nap_after_batch,
+    );
+
     /* receiver2mainthread */
     let (tx, mut rx) = mpsc::channel(8);
 
+    debug!("spawning receiver");
     let receiver = tokio::spawn(receive(combined, tx, max_retries));
 
     /* This semaphore controls the maximum number of tasks in flight. */
@@ -75,6 +93,8 @@ async fn run(
     while let Some(msg) = rx.recv().await {
         match msg {
             Message::Payload(payload) => {
+                debug!("got payload of size {}", payload.len());
+
                 for chunk in payload.chunks(batch_size) {
                     let mut tasks = vec![];
 
@@ -92,15 +112,22 @@ async fn run(
                         task.await??;
                     }
 
-                    /* Sleep a little for good measure. */
+                    /* Sleep a little after the sent batch, for good measure. */
                     sleep(Duration::from_secs_f64(nap_after_batch / 1000.0)).await;
                 }
+
+                debug!("dispatched the entire payload of size {}", payload.len());
             }
-            Message::Break => break,
+            Message::Break => {
+                info!("got Message::break, breaking");
+                break;
+            }
         }
     }
 
     receiver.await??;
+    debug!("awaited receiver");
 
+    info!("exiting");
     Ok(())
 }

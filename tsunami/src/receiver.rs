@@ -9,10 +9,12 @@ use std::{
     time::Duration,
 };
 use tokio::{sync::mpsc::Sender, time::timeout};
+use tracing::{debug, error, info, instrument, warn};
 
 const SYNACK: u8 = TcpFlags::SYN | TcpFlags::ACK;
 const RSTACK: u8 = TcpFlags::RST | TcpFlags::ACK;
 
+#[instrument(skip_all, name = "receiver")]
 pub async fn receive(
     combined: HashSet<Port>,
     tx: Sender<Message>,
@@ -38,6 +40,7 @@ pub async fn receive(
     /* trigger the machinery */
     tx.send(Message::Payload(status.keys().copied().collect()))
         .await?;
+    info!("triggered the machinery");
 
     /* increase the 'retried' field of all ports we just dispatched */
     status.iter_mut().for_each(|(_, info)| info.retried += 1);
@@ -51,6 +54,8 @@ pub async fn receive(
                     (Some(bytes), Some(ip))
                 }
                 Err(_) => {
+                    info!("timed out after 300ms");
+
                     /* we haven't received anything for 300ms and it's a good
                      * opportunity to check which ports have remained uninspected. */
                     let not_inspected = status
@@ -63,6 +68,7 @@ pub async fn receive(
 
                     /* if we inspected everything, break the main thread */
                     if not_inspected.is_empty() {
+                        info!("all done, sending Message::Break");
                         tx.send(Message::Break).await?;
                         break;
                     } else {
@@ -77,6 +83,11 @@ pub async fn receive(
                                     info.retried += 1
                                 }
                             });
+
+                        info!(
+                            "dispatching another batch of size {} to the main thread",
+                            not_inspected.len()
+                        );
                         tx.send(Message::Payload(not_inspected)).await?;
                     }
 
@@ -88,12 +99,16 @@ pub async fn receive(
          * which starts immediately after the IP header */
         let tcp_packet = match TcpPacket::new(&buf[IP_HDR_LEN as usize..]) {
             Some(packet) => packet,
-            None => bail!("couldn't make tcp packet"),
+            None => {
+                error!("couldn't make tcp packet");
+                bail!("couldn't make tcp packet");
+            }
         };
 
         /* The 'source' field in the TCP packet is now what used to be
          * the 'destination' field when we were sending out the probe. */
         let port = tcp_packet.get_source();
+        debug!(port, "got port");
 
         match tcp_packet.get_flags() {
             SYNACK => {
@@ -107,7 +122,9 @@ pub async fn receive(
                     info.status = PortStatus::Closed;
                 }
             }
-            _ => {}
+            _ => {
+                warn!(port, "port wasn't expected");
+            }
         }
     }
 
@@ -133,6 +150,8 @@ pub async fn receive(
     let retried_more_than_once_count = status.iter().filter(|(_, info)| info.retried > 1).count();
 
     println!("ports retried more than once: {retried_more_than_once_count}");
+
+    info!("exiting");
 
     Ok(())
 }

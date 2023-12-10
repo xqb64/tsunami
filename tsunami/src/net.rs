@@ -1,4 +1,4 @@
-use crate::Port;
+use crate::{error_and_bail, Port};
 use anyhow::{bail, Result};
 use libc::{
     addrinfo, freeaddrinfo, gai_strerror, getaddrinfo, getnameinfo, sockaddr, socklen_t, AF_INET,
@@ -39,7 +39,7 @@ pub async fn dns_lookup(hostname: &str) -> Result<IpAddr> {
     if err != 0 {
         /* if the lookup failed, return the error */
         let err_str = unsafe { CStr::from_ptr(gai_strerror(err)).to_str()? };
-        bail!("DNS lookup for host {hostname} failed: {err_str}");
+        error_and_bail!("DNS lookup for host {hostname} failed: {err_str}");
     }
 
     /* res now points to a linked list of addrinfo structures */
@@ -68,7 +68,7 @@ pub async fn dns_lookup(hostname: &str) -> Result<IpAddr> {
     if s != 0 {
         /* if the conversion failed,error_and_bail */
         let err_str = unsafe { CStr::from_ptr(gai_strerror(s)).to_str()? };
-        bail!("address conversion for host {hostname} failed: {err_str}");
+        error_and_bail!("address conversion for host {hostname} failed: {err_str}");
     }
 
     /* convert the C string to a Rust IpAddr and return it */
@@ -121,7 +121,7 @@ pub fn build_tcp_packet(
 pub fn create_recv_sock() -> Result<RawSocket> {
     match RawSocket::new(Domain::ipv4(), Type::raw(), Protocol::tcp().into()) {
         Ok(sock) => Ok(sock),
-        Err(_) => bail!("couldn't create the socket"),
+        Err(_) => error_and_bail!("couldn't create the socket"),
     }
 }
 
@@ -132,7 +132,7 @@ pub fn create_send_sock() -> Result<RawSocket> {
         Protocol::from(IPPROTO_RAW).into(),
     ) {
         Ok(sock) => Ok(sock),
-        Err(_) => bail!("couldn't create the socket"),
+        Err(_) => error_and_bail!("couldn't create the socket"),
     }
 }
 
@@ -144,7 +144,7 @@ pub async fn to_ipaddr(target: &str) -> Result<Ipv4Addr> {
                 IpAddr::V4(addr) => Ok(addr),
                 IpAddr::V6(_) => bail!("not implemented for ipv6."),
             },
-            Err(_) => bail!("couldn't resolve the hostname {target}"),
+            Err(_) => error_and_bail!("couldn't resolve the hostname {target}"),
         },
     }
 }

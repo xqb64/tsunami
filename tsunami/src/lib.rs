@@ -23,3 +23,11 @@ pub enum PortStatus {
     Filtered,
     NotInspected,
 }
+
+#[macro_export]
+macro_rules! error_and_bail {
+    ($msg:expr) => {{
+        tracing::error!($msg);
+        bail!($msg);
+    }};
+}
