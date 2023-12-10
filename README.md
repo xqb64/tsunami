@@ -81,6 +81,11 @@ OPTIONS:
 
 Contributions are very welcome, in particular, suggestions (and patches) as for how to make the whole system faster. Make sure you copy/paste the pre-commit hook into `.git/hooks`.
 
+## References
+
+- https://datatracker.ietf.org/doc/html/rfc791
+- https://datatracker.ietf.org/doc/html/rfc9293
+
 ## See also
 
 [wrath](https://github.com/xqb64/wrath) - My initial attempt, written in Python
