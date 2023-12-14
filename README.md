@@ -4,7 +4,7 @@
 
 <h1 align="center">tsunami</h1>
 
-This project represents my second attempt at writing a highly-performant TCP SYN reconnaissance tool. The objective was not to create the next `nmap`, but rather to explore the performance gains achieavable by using Rust over Python. The process of putting it together was real treat, and at this point I'm quite amazed by what Rust can do.
+This project represents my second attempt at writing a highly-performant TCP SYN reconnaissance tool. The objective was not to create the next `nmap`, but rather to explore the performance gains achievable by using Rust over Python. The process of putting it together was a real treat, and at this point I'm quite amazed by what Rust can do.
 
 ## How it works
 
