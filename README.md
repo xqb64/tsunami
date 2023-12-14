@@ -21,7 +21,7 @@ Upon receiving the response (in the first two cases), the kernel sends back anot
 In a lab environment on a machine with four cores and a direct 15m Category 6e link to the target router (`Asus RT-AC58U`, firmware `3.0.0.4.382_52134`), tsunami managed to inspect 64K ports in under 3 seconds.
 
 ```
-$ time target/release/tsunami --target 192.168.1.1 --batch-size 32768 -n 10 -N 10 --flying-tasks 512 -r 0-65535
+$ time target/release/tsunami 192.168.1.1  -r 0-65535 --batch-size 32768 --flying-tasks 512 -n 10 -N 10
 53: open
 18017: open
 34091: open
@@ -60,7 +60,7 @@ sudo setcap cap_net_raw+eip target/release/tsunami
 tsunami 0.1.0
 
 USAGE:
-    tsunami [OPTIONS] --target <target>
+    tsunami [OPTIONS] <target>
 
 FLAGS:
     -h, --help       Prints help information
@@ -74,7 +74,9 @@ OPTIONS:
     -n, --nap-after-spawn <nap-after-spawn>     [default: 10]
     -p, --ports <ports>...
     -r, --ranges <ranges>...
-    -t, --target <target>
+
+ARGS:
+    <target>
 ```
 
 ## Contributing
